@@ -15,7 +15,7 @@ const PrivacyPolicyPage = () => {
                         Introduction
                     </h3>
                     <p className="text-justify leading-relaxed text-gray-600 mt-5 mb-10">
-                        Normal Human (“Normal Human,” “we,” “us,” or “our”) we value your privacy and are committed to protecting
+                        SendOnce (“SendOnce,” “we,” “us,” or “our”) we value your privacy and are committed to protecting
                         and processing your personal information responsibly. This Privacy Statement describes how we collect, use, and
                         share the personal information described in this Privacy Statement, as well as the rights and choices individuals have
                         regarding such personal information. We may provide additional data privacy information by using a supplementary
@@ -60,7 +60,7 @@ const PrivacyPolicyPage = () => {
                         tracking technologies, such as cookies. Information that is collected with these technologies may be necessary to
                         operate the website or service, to improve performance, to help us understand how our online services are used, or to
                         determine the interests of our users. We use advertising partners to provide and assist in the use of such technologies
-                        on www.normalhuman.com and other sites.
+                        on www.sendonce.org and other sites.
                     </p>
                     <h3 className="text-left text-2xl font-semibold text-gray-600 mb-5">
                         Children
@@ -83,7 +83,7 @@ const PrivacyPolicyPage = () => {
                     </h3>
                     <p className="text-justify leading-relaxed text-gray-600 mt-5 mb-10">
                         We may share your personal information internally and externally with suppliers, advisors, or Business Partners for
-                        Normal Human’s legitimate business purposes, and only on a need-to-know basis. When sharing personal information,
+                        SendOnce’s legitimate business purposes, and only on a need-to-know basis. When sharing personal information,
                         we implement appropriate checks and controls to confirm that the information can be shared in accordance with the
                         applicable law. This section describes how we share information and how we facilitate that sharing.
                     </p>
@@ -108,7 +108,7 @@ const PrivacyPolicyPage = () => {
                     </h3>
                     <p className="text-justify leading-relaxed text-gray-600 mt-5 mb-10">
                         You have certain rights when it comes to the handling of your personal information. By emailing us at
-                        support@normal-human.com, you can:
+                        manasr224@gmail.com, you can:
                     </p>
                     <ul className="list-disc list-inside text-justify leading-relaxed text-gray-600 mt-5 mb-10">
                         <li>request access to the personal information that we have on you, or have it updated or corrected. Depending
@@ -117,7 +117,7 @@ const PrivacyPolicyPage = () => {
                             as the right to data portability).</li>
                         <li>request to delete the personal information we hold information processing types, such as targeted advertising.</li>
                         <li>ask questions related to this Privacy Statement and privacy practices.</li>
-                        <li>submit a complaint to Normal Human if you are not satisfied with how we are processing your personal
+                        <li>submit a complaint to SendOnce if you are not satisfied with how we are processing your personal
                             information.</li>
                     </ul>
                     <h3 className="text-left text-2xl font-semibold text-gray-600 mb-5">
