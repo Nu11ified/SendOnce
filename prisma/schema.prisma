@@ -111,6 +111,8 @@ model Account {
     name         String
 
     nextDeltaToken String?
+    lastResyncAt   DateTime?
+    resyncCount    Int       @default(0)
 
     user           User           @relation(fields: [userId], references: [id])
     threads        Thread[]
