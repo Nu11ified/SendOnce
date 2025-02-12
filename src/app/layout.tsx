@@ -10,8 +10,8 @@ import { ThemeProvider } from "@/components/theme-provicer";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "Normal Human",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  title: "SendOnce",
+  icons: [{ rel: "icon", url: "/sendonce.svg" }],
 };
 
 export default function RootLayout({
