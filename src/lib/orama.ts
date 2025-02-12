@@ -57,6 +57,11 @@ export class OramaManager {
 
     async search({ term }: { term: string }) {
         try {
+            if (!this.orama) {
+                console.log('Search index not initialized, initializing now...');
+                await this.initialize();
+            }
+            
             console.log('Searching for term:', term);
             const results = await search(this.orama, {
                 term,
