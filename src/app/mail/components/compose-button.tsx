@@ -18,14 +18,17 @@ import { api } from "@/trpc/react"
 import { useLocalStorage } from "usehooks-ts"
 import { toast } from "sonner"
 
-const ComposeButton = () => {
+interface ComposeButtonProps {
+    iconOnly?: boolean;
+}
+
+const ComposeButton = ({ iconOnly }: ComposeButtonProps) => {
     const [open, setOpen] = React.useState(false)
     const [accountId] = useLocalStorage('accountId', '')
     const [toValues, setToValues] = React.useState<{ label: string; value: string; }[]>([])
     const [ccValues, setCcValues] = React.useState<{ label: string; value: string; }[]>([])
     const [subject, setSubject] = React.useState<string>('')
     const { data: account } = api.mail.getMyAccount.useQuery({ accountId })
-
 
     React.useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -45,8 +48,6 @@ const ComposeButton = () => {
     const sendEmail = api.mail.sendEmail.useMutation()
 
     const handleSend = async (value: string) => {
-        console.log(account)
-        console.log({ value })
         if (!account) return
         sendEmail.mutate({
             accountId,
@@ -70,13 +71,12 @@ const ComposeButton = () => {
         })
     }
 
-
     return (
         <Drawer open={open} onOpenChange={setOpen}>
             <DrawerTrigger asChild>
-                <Button>
-                    <Pencil className='size-4 mr-1' />
-                    Compose
+                <Button variant="ghost" size={iconOnly ? "icon" : "default"}>
+                    <Pencil className='size-4' />
+                    {!iconOnly && <span className="ml-2">Compose</span>}
                 </Button>
             </DrawerTrigger>
             <DrawerContent className="">
@@ -85,26 +85,21 @@ const ComposeButton = () => {
                     <EmailEditor
                         toValues={toValues}
                         ccValues={ccValues}
-
                         onToChange={(values) => {
                             setToValues(values)
                         }}
                         onCcChange={(values) => {
                             setCcValues(values)
                         }}
-
                         subject={subject}
                         setSubject={setSubject}
-
                         to={toValues.map(to => to.value)}
                         handleSend={handleSend}
                         isSending={sendEmail.isPending}
-
                         defaultToolbarExpand
                     />
                 </DrawerHeader>
             </DrawerContent>
-
         </Drawer>
     )
 }

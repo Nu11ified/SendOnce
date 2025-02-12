@@ -1,6 +1,12 @@
 'use client'
 import React from 'react'
 import { Nav } from './nav'
+import { ModeToggle } from "@/components/theme-toggle"
+import { UserButton } from "@clerk/nextjs"
+import ComposeButton from './compose-button'
+import { cn } from '@/lib/utils'
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { buttonVariants } from '@/components/ui/button'
 
 import {
     AlertCircle,
@@ -20,7 +26,6 @@ import { api } from '@/trpc/react'
 type Props = { isCollapsed: boolean }
 
 const SideBar = ({ isCollapsed }: Props) => {
-
     const [tab] = useLocalStorage("normalhuman-tab", "inbox")
     const [accountId] = useLocalStorage("accountId", "")
 
@@ -41,7 +46,7 @@ const SideBar = ({ isCollapsed }: Props) => {
     }, { enabled: !!accountId && !!tab, refetchInterval })
 
     return (
-        <>
+        <div className="flex flex-col h-full">
             <Nav
                 isCollapsed={isCollapsed}
                 links={[
@@ -65,7 +70,54 @@ const SideBar = ({ isCollapsed }: Props) => {
                     },
                 ]}
             />
-        </>
+            <div className="flex-1" />
+            <div
+                data-collapsed={isCollapsed}
+                className="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2"
+            >
+                <nav className="grid gap-1 px-2 group-[[data-collapsed=true]]:justify-center group-[[data-collapsed=true]]:px-2">
+                    <div className="flex flex-col gap-1">
+                        {isCollapsed ? (
+                            <>
+                                <UserButton />
+                                <Tooltip delayDuration={0}>
+                                    <TooltipTrigger asChild>
+                                        <div className={cn(
+                                            buttonVariants({ variant: "ghost", size: "icon" }),
+                                            "h-9 w-9 cursor-pointer"
+                                        )}>
+                                            <ModeToggle iconOnly />
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">
+                                        Toggle theme
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip delayDuration={0}>
+                                    <TooltipTrigger asChild>
+                                        <div className={cn(
+                                            buttonVariants({ variant: "ghost", size: "icon" }),
+                                            "h-9 w-9 cursor-pointer"
+                                        )}>
+                                            <ComposeButton iconOnly />
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">
+                                        Compose email
+                                    </TooltipContent>
+                                </Tooltip>
+                            </>
+                        ) : (
+                            <>
+                                <UserButton />
+                                <ModeToggle />
+                                <ComposeButton />
+                            </>
+                        )}
+                    </div>
+                </nav>
+            </div>
+        </div>
     )
 }
 
