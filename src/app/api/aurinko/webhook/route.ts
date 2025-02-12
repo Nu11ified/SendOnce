@@ -61,23 +61,53 @@ export const POST = async (req: NextRequest) => {
                 where: {
                     provider: 'aurinko',
                     token: {
-                        contains: `"accountId":${payload.accountId}`
+                        contains: `"accountId": ${payload.accountId}`
                     }
                 }
             });
 
             if (!accounts || accounts.length === 0) {
-                console.error("Webhook: No accounts found for Aurinko ID", payload.accountId);
-                // Try to find any Aurinko accounts for debugging
-                const allAurinkoAccounts = await db.account.findMany({
-                    where: { provider: 'aurinko' },
-                    select: { id: true, token: true }
+                // Try alternative format
+                const accountsAlt = await db.account.findMany({
+                    where: {
+                        provider: 'aurinko',
+                        token: {
+                            contains: `"accountId":${payload.accountId}`
+                        }
+                    }
                 });
-                console.log("Webhook: All Aurinko accounts:", allAurinkoAccounts.map(acc => ({
-                    id: acc.id,
-                    tokenPreview: acc.token.substring(0, 50) + '...'
-                })));
-                return new Response("Account not found", { status: 404 });
+
+                if (accountsAlt && accountsAlt.length > 0) {
+                    console.log(`Webhook: Found ${accountsAlt.length} accounts with alternative format`);
+                    accounts.push(...accountsAlt);
+                } else {
+                    console.error("Webhook: No accounts found for Aurinko ID", payload.accountId);
+                    // Try to find any Aurinko accounts for debugging
+                    const allAurinkoAccounts = await db.account.findMany({
+                        where: { provider: 'aurinko' },
+                        select: { id: true, token: true }
+                    });
+                    console.log("Webhook: All Aurinko accounts:", allAurinkoAccounts.map(acc => {
+                        const token = acc.token;
+                        try {
+                            const parsed = JSON.parse(token);
+                            return {
+                                id: acc.id,
+                                tokenPreview: token.substring(0, 100) + '...',
+                                parsedAccountId: parsed.accountId,
+                                hasAccountId: token.includes('accountId')
+                            };
+                        } catch (e) {
+                            return {
+                                id: acc.id,
+                                tokenPreview: token.substring(0, 100) + '...',
+                                parseError: true,
+                                hasAccountId: token.includes('accountId')
+                            };
+                        }
+                    }));
+                    return new Response("Account not found", { status: 404 });
+                }
             }
 
             console.log(`Webhook: Found ${accounts.length} accounts to process`);
@@ -166,3 +196,4 @@ export const POST = async (req: NextRequest) => {
         return new Response("Error processing sync", { status: 500 });
     }
 };
+

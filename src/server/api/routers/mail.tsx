@@ -355,18 +355,18 @@ export const mailRouter = createTRPCRouter({
         // Verify account ownership
         const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId);
         
-        // Delete all related data
+        // Delete all related data in the correct order to handle foreign key constraints
         await ctx.db.$transaction([
-            // Delete all email addresses
-            ctx.db.emailAddress.deleteMany({
-                where: { accountId: input.accountId }
-            }),
-            // Delete all emails in threads
+            // First delete all emails (this will handle the fromId foreign key)
             ctx.db.email.deleteMany({
                 where: { thread: { accountId: input.accountId } }
             }),
-            // Delete all threads
+            // Then delete all threads
             ctx.db.thread.deleteMany({
+                where: { accountId: input.accountId }
+            }),
+            // Then delete all email addresses
+            ctx.db.emailAddress.deleteMany({
                 where: { accountId: input.accountId }
             }),
             // Finally delete the account
