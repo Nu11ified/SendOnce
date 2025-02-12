@@ -44,18 +44,17 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
 
     if (isCollapsed) return null;
     return (
-        <div className='p-4 mb-14'>
-
+        <div className='p-2 mb-14 min-w-0'>
             <PremiumBanner />
             <div className="h-4"></div>
-            <motion.div className="flex flex-1 flex-col items-end justify-end pb-4 border p-4 rounded-lg bg-gray-100 shadow-inner dark:bg-gray-900">
+            <motion.div className="flex flex-1 flex-col items-end justify-end pb-4 border p-2 sm:p-4 rounded-lg bg-gray-100 shadow-inner dark:bg-gray-900 min-w-0">
                 <div className="max-h-[50vh] overflow-y-scroll w-full flex flex-col gap-2" id='message-container'>
                     <AnimatePresence mode="wait">
                         {messages.map((message) => (
                             <motion.div
                                 key={message.id}
                                 layout="position"
-                                className={cn("z-10 mt-2 max-w-[250px] break-words rounded-2xl bg-gray-200 dark:bg-gray-800", {
+                                className={cn("z-10 mt-2 max-w-[80%] break-words rounded-2xl bg-gray-200 dark:bg-gray-800", {
                                     'self-end text-gray-900 dark:text-gray-100': message.role === 'user',
                                     'self-start bg-blue-500 text-white': message.role === 'assistant',
                                 })}
@@ -70,17 +69,17 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
                     </AnimatePresence>
                 </div>
                 {messages.length > 0 && <div className="h-4"></div>}
-                <div className="w-full">
+                <div className="w-full min-w-0">
                     {messages.length === 0 && <div className="mb-4">
-                        <div className='flex items-center gap-4'>
-                            <SparklesIcon className='size-6 text-gray-500' />
-                            <div>
-                                <p className='text-gray-900 dark:text-gray-100'>Ask AI anything about your emails</p>
-                                <p className='text-gray-500 text-xs dark:text-gray-400'>Get answers to your questions about your emails</p>
+                        <div className='flex items-center gap-2'>
+                            <SparklesIcon className='size-5 flex-shrink-0 text-gray-500' />
+                            <div className='min-w-0'>
+                                <p className='text-gray-900 dark:text-gray-100 text-sm truncate'>Ask AI anything about your emails</p>
+                                <p className='text-gray-500 text-xs dark:text-gray-400 truncate'>Get answers to your questions about your emails</p>
                             </div>
                         </div>
                         <div className="h-2"></div>
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1 flex-wrap">
                             <span 
                                 onClick={() => setInput('What can I ask?')} 
                                 className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs cursor-pointer hover:bg-gray-700'
@@ -91,18 +90,18 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
                                 onClick={() => setInput('When is my next flight?')} 
                                 className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs cursor-pointer hover:bg-gray-700'
                             >
-                                When is my next flight?
+                                Next flight?
                             </span>
                             <span 
                                 onClick={() => setInput('When is my next meeting?')} 
                                 className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs cursor-pointer hover:bg-gray-700'
                             >
-                                When is my next meeting?
+                                Next meeting?
                             </span>
                         </div>
                     </div>
                     }
-                    <form onSubmit={handleSubmit} className="flex w-full relative">
+                    <form onSubmit={handleSubmit} className="flex w-full relative min-w-0 gap-2">
                         <input
                             type="text"
                             onChange={handleInputChange}
@@ -110,7 +109,7 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
                             className="py- relative h-9 placeholder:text-[13px] w-full rounded-full border border-gray-200 bg-white px-3 text-[15px] outline-none placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-blue-500/20 focus-visible:ring-offset-1
             dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400 dark:focus-visible:ring-blue-500/20 dark:focus-visible:ring-offset-1 dark:focus-visible:ring-offset-gray-700
             min-w-0"
-                            placeholder="Ask AI anything about your emails"
+                            placeholder="Ask AI..."
                         />
                         <motion.div
                             key={messages.length}
@@ -128,7 +127,7 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
                         </motion.div>
                         <button
                             type="submit"
-                            className="ml-2 flex h-9 w-9 items-center justify-center rounded-full bg-gray-200
+                            className="flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-gray-200
             dark:bg-gray-800"
                         >
                             <Send className="size-4 text-gray-500 dark:text-gray-300" />
