@@ -19,8 +19,7 @@ interface NavProps {
     title: string
     label?: string
     icon: LucideIcon
-    variant: "default" | "ghost"
-    onClick?: () => void
+    variant: "default" | "ghost",
   }[]
 }
 
@@ -39,13 +38,7 @@ export function Nav({ links, isCollapsed }: NavProps) {
             <Tooltip key={index} delayDuration={0}>
               <TooltipTrigger asChild>
                 <span
-                  onClick={() => {
-                    if (link.onClick) {
-                      link.onClick()
-                    } else {
-                      setTab(link.title.toLowerCase())
-                    }
-                  }}
+                  onClick={() => setTab(link.title.toLowerCase())}
                   className={cn(
                     buttonVariants({ variant: link.variant, size: "icon" }),
                     "h-9 w-9 cursor-pointer",
@@ -69,13 +62,7 @@ export function Nav({ links, isCollapsed }: NavProps) {
           ) : (
             <span
               key={index}
-              onClick={() => {
-                if (link.onClick) {
-                  link.onClick()
-                } else {
-                  setTab(link.title.toLowerCase())
-                }
-              }}
+              onClick={() => setTab(link.title.toLowerCase())}
               className={cn(
                 buttonVariants({ variant: link.variant, size: "sm" }),
                 link.variant === "default" &&

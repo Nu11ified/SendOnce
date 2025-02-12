@@ -23,13 +23,13 @@ const LandingPage = async () => {
                 </h1>
                 <div className="h-4"></div>
                 <p className="text-xl mb-8 text-gray-600 max-w-xl text-center">
-                    SendOnce is a minimalistic, AI-powered email client that empowers you to manage your email with ease.
+                    Normal Human is a minimalistic, AI-powered email client that empowers you to manage your email with ease.
                 </p>
                 <div className="space-x-4">
                     <Button>
                         <Link href="/mail">Get Started</Link>
                     </Button>
-                    <Link href='/privacy'>
+                    <Link href='https://start-saas.com?utm=normalhuman'>
                         <Button variant="outline" >Learn More</Button>
                     </Link>
                 </div>

@@ -74,7 +74,7 @@ const ComposeButton = () => {
     return (
         <Drawer open={open} onOpenChange={setOpen}>
             <DrawerTrigger asChild>
-                <Button data-compose-trigger>
+                <Button>
                     <Pencil className='size-4 mr-1' />
                     Compose
                 </Button>

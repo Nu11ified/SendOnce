@@ -1,22 +1,19 @@
-import { OpenAIStream, StreamingTextResponse, streamText } from 'ai';
-import { Configuration, OpenAIApi } from "openai-edge";
+import { streamText } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { createStreamableValue } from 'ai/rsc';
 
 export interface Message {
     role: 'user' | 'assistant';
     content: string;
 }
 
-const config = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(config);
 
 export async function POST(req: Request) {
     // extract the prompt from the body
     const { prompt } = await req.json();
 
     const response = await openai.createChatCompletion({
-        model: "gpt-4o-mini",
+        model: "gpt-3.5-turbo",
         messages: [
             {
                 role: "system",
