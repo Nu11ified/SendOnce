@@ -71,6 +71,7 @@ model Account {
     provider     String
     emailAddress String
     name         String
+    lastSyncedAt DateTime?
 
     nextDeltaToken String?
 

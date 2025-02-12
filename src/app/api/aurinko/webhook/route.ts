@@ -56,11 +56,22 @@ export const POST = async (req: NextRequest) => {
         return new Response("Account not found", { status: 404 });
     }
     const acc = new Account(account.token)
-    waitUntil(acc.syncEmails().then(() => {
-        console.log("Synced emails")
-    }))
+    try {
+        await waitUntil(
+            acc.syncEmails()
+                .then(() => {
+                    console.log(`Successfully synced emails for account ${account.id}`);
+                })
+                .catch((error) => {
+                    console.error(`Failed to sync emails for account ${account.id}:`, error);
+                    throw error;
+                })
+        );
+    } catch (error) {
+        console.error("Sync failed in webhook:", error);
+        // Still return 200 to acknowledge receipt of webhook
+        return new Response("Sync scheduled", { status: 200 });
+    }
 
-    // Process the notification payload as needed
-
-    return new Response(null, { status: 200 });
+    return new Response("Sync completed", { status: 200 });
 };
