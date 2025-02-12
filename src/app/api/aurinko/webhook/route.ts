@@ -32,58 +32,85 @@ export const POST = async (req: NextRequest) => {
     if (signature !== expectedSignature) {
         return new Response("Unauthorized", { status: 401 });
     }
-    type AurinkoNotification = {
-        subscription: number;
-        resource: string;
-        accountId: number;
-        payloads: {
-            id: string;
-            changeType: string;
-            attributes: {
-                threadId: string;
-            };
-        }[];
-    };
 
-    const payload = JSON.parse(body) as AurinkoNotification;
-    console.log("Received notification:", JSON.stringify(payload, null, 2));
-    const account = await db.account.findUnique({
-        where: {
-            id: payload.accountId.toString()
-        }
-    })
-    if (!account) {
-        return new Response("Account not found", { status: 404 });
-    }
-    const acc = new Account(account.token)
     try {
-        if (!account.nextDeltaToken) {
-            console.log('No delta token found, performing initial sync');
-            const response = await acc.performInitialSync();
-            if (response) {
-                await db.account.update({
-                    where: { id: account.id },
-                    data: { nextDeltaToken: response.deltaToken }
-                });
-                console.log('Initial sync completed, delta token saved');
-            }
-        } else {
-            await waitUntil(
-                acc.syncEmails()
-                    .then(() => {
-                        console.log(`Successfully synced emails for account ${account.id}`);
-                    })
-                    .catch((error) => {
-                        console.error(`Failed to sync emails for account ${account.id}:`, error);
-                        throw error;
-                    })
-            );
-        }
-    } catch (error) {
-        console.error("Sync failed in webhook:", error);
-        // Still return 200 to acknowledge receipt of webhook
-        return new Response("Sync scheduled", { status: 200 });
-    }
+        // Check for accounts that need syncing (more than 4 minutes since last sync)
+        const accountsToSync = await db.account.findMany({
+            where: {
+                AND: [
+                    { nextDeltaToken: { not: null } },
+                    {
+                        OR: [
+                            { lastSyncedAt: { lt: new Date(Date.now() - 4 * 60 * 1000) } },
+                            { lastSyncedAt: null }
+                        ]
+                    }
+                ]
+            },
+            take: 3 // Process a few accounts at a time
+        });
 
-    return new Response("Sync completed", { status: 200 });
+        // Process webhook notification if present
+        if (body) {
+            type AurinkoNotification = {
+                subscription: number;
+                resource: string;
+                accountId: number;
+                payloads: {
+                    id: string;
+                    changeType: string;
+                    attributes: {
+                        threadId: string;
+                    };
+                }[];
+            };
+
+            const payload = JSON.parse(body) as AurinkoNotification;
+            console.log("Received notification:", JSON.stringify(payload, null, 2));
+            const notifiedAccount = await db.account.findUnique({
+                where: { id: payload.accountId.toString() }
+            });
+
+            if (notifiedAccount) {
+                accountsToSync.push(notifiedAccount);
+            }
+        }
+
+        // Process unique accounts
+        const uniqueAccounts = [...new Map(accountsToSync.map(acc => [acc.id, acc])).values()];
+
+        // Sync each account
+        await Promise.all(uniqueAccounts.map(async (account) => {
+            try {
+                const acc = new Account(account.token);
+                if (!account.nextDeltaToken) {
+                    console.log('No delta token found, performing initial sync');
+                    const response = await acc.performInitialSync();
+                    if (response) {
+                        await db.account.update({
+                            where: { id: account.id },
+                            data: { 
+                                nextDeltaToken: response.deltaToken,
+                                lastSyncedAt: new Date()
+                            }
+                        });
+                    }
+                } else {
+                    await acc.syncEmails();
+                    await db.account.update({
+                        where: { id: account.id },
+                        data: { lastSyncedAt: new Date() }
+                    });
+                }
+                console.log(`Successfully synced account ${account.id}`);
+            } catch (error) {
+                console.error(`Failed to sync account ${account.id}:`, error);
+            }
+        }));
+
+        return new Response("Sync completed", { status: 200 });
+    } catch (error) {
+        console.error("Sync failed:", error);
+        return new Response("Error processing sync", { status: 500 });
+    }
 };
