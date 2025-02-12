@@ -23,7 +23,7 @@ export const GET = async (req: NextRequest) => {
             id: token.accountId.toString(),
             userId,
             token: token.accessToken,
-            provider: 'Aurinko',
+            provider: 'aurinko',
             emailAddress: accountDetails.email,
             name: accountDetails.name
         },
