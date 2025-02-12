@@ -1,7 +1,7 @@
 {
     "version": 2,
     "functions": {
-        "api/cron/sync": {
+        "app/api/cron/sync/route": {
             "maxDuration": 60
         }
     },
