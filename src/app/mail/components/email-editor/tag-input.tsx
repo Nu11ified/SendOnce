@@ -1,21 +1,15 @@
 import React, { useState } from 'react';
 import Avatar from 'react-avatar';
 import Select from 'react-select';
-import { GroupBase } from 'react-select';
-
-type Option = {
-    label: React.ReactNode;
-    value: string;
-};
 
 type TagInputProps = {
     suggestions: string[];
-    defaultValues?: Option[];
+    defaultValues?: { label: string, value: string }[];
     placeholder: string;
     label: string;
 
-    onChange: (values: Option[]) => void;
-    value: Option[];
+    onChange: (values: { label: string, value: string }[]) => void;
+    value: { label: string, value: string }[];
 };
 
 const TagInput: React.FC<TagInputProps> = ({ suggestions, defaultValues = [], label, onChange, value }) => {

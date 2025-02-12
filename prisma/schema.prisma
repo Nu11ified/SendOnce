@@ -19,8 +19,6 @@ model User {
 
     stripeSubscriptionId String?             @unique
     stripeSubscription   StripeSubscription? @relation(fields: [stripeSubscriptionId], references: [id])
-    tokenBalance         TokenBalance?
-    tokenPurchases      TokenPurchase[]
 
     role Role @default(user)
 
@@ -47,35 +45,6 @@ model ChatbotInteraction {
     @@index([day, userId])
 }
 
-model TokenBalance {
-    id        String   @id @default(cuid())
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    userId String @unique
-    user   User   @relation(fields: [userId], references: [id])
-
-    monthlyTokens Int @default(0)  // Monthly allocated tokens for pro users
-    bonusTokens   Int @default(0)  // Additional purchased tokens
-    usedTokens    Int @default(0)  // Total tokens used in current period
-
-    lastResetDate DateTime @default(now()) // Date when monthly tokens were last reset
-}
-
-model TokenPurchase {
-    id        String   @id @default(cuid())
-    createdAt DateTime @default(now())
-
-    userId String
-    user   User   @relation(fields: [userId], references: [id])
-
-    amount     Int      // Number of tokens purchased
-    cost       Float    // Cost in currency
-    stripePaymentId String @unique
-
-    @@index([userId])
-}
-
 model StripeSubscription {
     id        String   @id @default(cuid())
     createdAt DateTime @default(now())
@@ -87,13 +56,6 @@ model StripeSubscription {
     productId      String?
     priceId        String?
     customerId     String?
-    
-    monthlyTokenAllocation Int @default(0)  // Number of tokens allocated monthly
-    additionalAccounts    Int @default(0)   // Number of additional accounts purchased
-    
-    autoRefillEnabled Boolean @default(false) // Whether automatic token refill is enabled
-    autoRefillThreshold Int @default(0)     // Token threshold to trigger auto-refill
-    autoRefillAmount Int @default(0)        // Number of tokens to purchase on auto-refill
 
     currentPeriodEnd DateTime
     updatedAt        DateTime @updatedAt
@@ -111,8 +73,6 @@ model Account {
     name         String
 
     nextDeltaToken String?
-    lastResyncAt   DateTime?
-    resyncCount    Int       @default(0)
 
     user           User           @relation(fields: [userId], references: [id])
     threads        Thread[]

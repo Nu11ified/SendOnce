@@ -4,7 +4,6 @@ import axios from 'axios';
 import { syncEmailsToDatabase } from './sync-to-db';
 
 const API_BASE_URL = 'https://api.aurinko.io/v1';
-const BATCH_SIZE = 50; // Process emails in smaller batches
 
 class Account {
     private token: string;
@@ -13,13 +12,12 @@ class Account {
         this.token = token;
     }
 
-    public async startSync(daysWithin: number): Promise<SyncResponse> {
+    private async startSync(daysWithin: number): Promise<SyncResponse> {
         const response = await axios.post<SyncResponse>(
             `${API_BASE_URL}/email/sync`,
             {},
             {
-                headers: { Authorization: `Bearer ${this.token}` }, 
-                params: {
+                headers: { Authorization: `Bearer ${this.token}` }, params: {
                     daysWithin,
                     bodyType: 'html'
                 }
@@ -47,59 +45,48 @@ class Account {
 
     async syncEmails() {
         const account = await db.account.findUnique({
-            where: { token: this.token },
+            where: {
+                token: this.token
+            },
         })
         if (!account) throw new Error("Invalid token")
         if (!account.nextDeltaToken) throw new Error("No delta token")
-        
         let response = await this.getUpdatedEmails({ deltaToken: account.nextDeltaToken })
-        let allEmails: EmailMessage[] = []
+        let allEmails: EmailMessage[] = response.records
         let storedDeltaToken = account.nextDeltaToken
-        let currentBatch = response.records
-
-        // Process first batch
-        if (currentBatch.length > 0) {
-            await syncEmailsToDatabase(currentBatch.slice(0, BATCH_SIZE), account.id)
-            allEmails = allEmails.concat(currentBatch)
-        }
-
         if (response.nextDeltaToken) {
             storedDeltaToken = response.nextDeltaToken
         }
-
-        // Process remaining pages in batches
         while (response.nextPageToken) {
-            try {
-                response = await this.getUpdatedEmails({ pageToken: response.nextPageToken });
-                currentBatch = response.records
-
-                if (currentBatch.length > 0) {
-                    for (let i = 0; i < currentBatch.length; i += BATCH_SIZE) {
-                        const batch = currentBatch.slice(i, i + BATCH_SIZE)
-                        await syncEmailsToDatabase(batch, account.id)
-                    }
-                    allEmails = allEmails.concat(currentBatch)
-                }
-
-                if (response.nextDeltaToken) {
-                    storedDeltaToken = response.nextDeltaToken
-                }
-            } catch (error) {
-                console.error('Error processing batch:', error)
-                break // Stop processing but save what we have
+            response = await this.getUpdatedEmails({ pageToken: response.nextPageToken });
+            allEmails = allEmails.concat(response.records);
+            if (response.nextDeltaToken) {
+                storedDeltaToken = response.nextDeltaToken
             }
         }
 
-        // Update the delta token
-        await db.account.update({
-            where: { id: account.id },
-            data: { nextDeltaToken: storedDeltaToken }
-        })
+        if (!response) throw new Error("Failed to sync emails")
 
-        return allEmails
+
+        try {
+            await syncEmailsToDatabase(allEmails, account.id)
+        } catch (error) {
+            console.log('error', error)
+        }
+
+        // console.log('syncEmails', response)
+        await db.account.update({
+            where: {
+                id: account.id,
+            },
+            data: {
+                nextDeltaToken: storedDeltaToken,
+            }
+        })
     }
 
     async getUpdatedEmails({ deltaToken, pageToken }: { deltaToken?: string, pageToken?: string }): Promise<SyncUpdatedResponse> {
+        // console.log('getUpdatedEmails', { deltaToken, pageToken });
         let params: Record<string, string> = {};
         if (deltaToken) {
             params.deltaToken = deltaToken;
@@ -119,59 +106,57 @@ class Account {
 
     async performInitialSync() {
         try {
-            // Start the sync process with 30 days of history
-            const daysWithin = 30;
-            let syncResponse = await this.startSync(daysWithin);
+            // Start the sync process
+            const daysWithin = 3
+            let syncResponse = await this.startSync(daysWithin); // Sync emails from the last 7 days
 
-            // Wait until the sync is ready with shorter timeout
-            let attempts = 0;
-            const maxAttempts = 5; // Reduced from 10 to stay within time limit
-            while (!syncResponse.ready && attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 500)); // Reduced from 1000ms to 500ms
+            // Wait until the sync is ready
+            while (!syncResponse.ready) {
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
                 syncResponse = await this.startSync(daysWithin);
-                attempts++;
             }
 
-            if (!syncResponse.ready) {
-                throw new Error('Sync timed out after ' + maxAttempts + ' attempts');
-            }
+            // console.log('Sync is ready. Tokens:', syncResponse);
 
-            // Get first batch with smaller batch size for faster processing
-            const SYNC_BATCH_SIZE = 25; // Reduced from 50 to process faster
+            // Perform initial sync of updated emails
+            let storedDeltaToken: string = syncResponse.syncUpdatedToken
             let updatedResponse = await this.getUpdatedEmails({ deltaToken: syncResponse.syncUpdatedToken });
-            let storedDeltaToken = updatedResponse.nextDeltaToken || syncResponse.syncUpdatedToken;
+            // console.log('updatedResponse', updatedResponse)
+            if (updatedResponse.nextDeltaToken) {
+                storedDeltaToken = updatedResponse.nextDeltaToken
+            }
+            let allEmails: EmailMessage[] = updatedResponse.records;
 
-            // Process first batch
-            if (updatedResponse.records.length > 0) {
-                const batch = updatedResponse.records.slice(0, SYNC_BATCH_SIZE);
-                await syncEmailsToDatabase(batch, this.token);
+            // Fetch all pages if there are more
+            while (updatedResponse.nextPageToken) {
+                updatedResponse = await this.getUpdatedEmails({ pageToken: updatedResponse.nextPageToken });
+                allEmails = allEmails.concat(updatedResponse.records);
+                if (updatedResponse.nextDeltaToken) {
+                    storedDeltaToken = updatedResponse.nextDeltaToken
+                }
             }
 
-            // Store the delta token even if we don't process all emails
-            // This allows for incremental syncing of remaining emails
-            const account = await db.account.findUnique({
-                where: { token: this.token }
-            });
+            // console.log('Initial sync complete. Total emails:', allEmails.length);
 
-            if (account) {
-                await db.account.update({
-                    where: { id: account.id },
-                    data: { nextDeltaToken: storedDeltaToken }
-                });
-            }
+            // Store the nextDeltaToken for future incremental syncs
 
+
+            // Example of using the stored delta token for an incremental sync
+            // await this.performIncrementalSync(storedDeltaToken);
             return {
-                success: true,
+                emails: allEmails,
                 deltaToken: storedDeltaToken,
-                hasMoreEmails: !!updatedResponse.nextPageToken,
-                processedEmails: updatedResponse.records.length
-            };
+            }
 
         } catch (error) {
-            console.error('Error during initial sync:', error);
-            throw error;
+            if (axios.isAxiosError(error)) {
+                console.error('Error during sync:', JSON.stringify(error.response?.data, null, 2));
+            } else {
+                console.error('Error during sync:', error);
+            }
         }
     }
+
 
     async sendEmail({
         from,
@@ -230,6 +215,7 @@ class Account {
             throw error;
         }
     }
+
 
     async getWebhooks() {
         type Response = {

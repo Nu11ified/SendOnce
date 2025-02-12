@@ -41,9 +41,6 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
         }
     }, [messages]);
 
-    const handleSuggestionClick = (text: string) => {
-        handleInputChange({ target: { value: text } } as React.ChangeEvent<HTMLInputElement>);
-    };
 
     if (isCollapsed) return null;
     return (
@@ -84,18 +81,21 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
                         </div>
                         <div className="h-2"></div>
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span onClick={() => handleSuggestionClick('What can I ask?')} 
-                                className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs'>
-                                What can I ask?
-                            </span>
-                            <span onClick={() => handleSuggestionClick('When is my next flight?')} 
-                                className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs'>
-                                When is my next flight?
-                            </span>
-                            <span onClick={() => handleSuggestionClick('When is my next meeting?')} 
-                                className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs'>
-                                When is my next meeting?
-                            </span>
+                            <span onClick={() => handleInputChange({
+                                target: {
+                                    value: 'What can I ask?'
+                                }
+                            })} className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs'>What can I ask?</span>
+                            <span onClick={() => handleInputChange({
+                                target: {
+                                    value: 'When is my next flight?'
+                                }
+                            })} className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs'>When is my next flight?</span>
+                            <span onClick={() => handleInputChange({
+                                target: {
+                                    value: 'When is my next meeting?'
+                                }
+                            })} className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs'>When is my next meeting?</span>
                         </div>
                     </div>
                     }

@@ -1,13 +1,10 @@
 import Quill from 'quill';
-import { Scope } from 'parchment';
 
-const Parchment = Quill.import('parchment') as any;
-const Embed = Quill.import('blots/embed') as any;
+const Embed = Quill.import('blots/embed');
 
 export class CopilotSuggestion extends Embed {
     static blotName = 'copilot-suggestion';
     static tagName = 'span';
-    static scope = Scope.INLINE;
 
     static create(value: string) {
         const node = super.create(value);
@@ -21,7 +18,7 @@ export class CopilotSuggestion extends Embed {
     }
 }
 
-Quill.register('formats/copilot-suggestion', CopilotSuggestion);
+Quill.register(CopilotSuggestion);
 
 export default class QuillCopilot {
     quill: Quill;

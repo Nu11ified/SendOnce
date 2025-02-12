@@ -1,24 +1,19 @@
-import OpenAI from 'openai';
-import { streamText } from 'ai';
+import { OpenAIStream, StreamingTextResponse, streamText } from 'ai';
+import { openai } from '@ai-sdk/openai';
 import { createStreamableValue } from 'ai/rsc';
-import { OpenAIStream, StreamingTextResponse } from 'ai';
 
 export interface Message {
     role: 'user' | 'assistant';
     content: string;
 }
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY!,
-});
 
 export async function POST(req: Request) {
     // extract the prompt from the body
     const { prompt } = await req.json();
 
-    const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini-2024-07-18",
+    const response = await openai.createChatCompletion({
+        model: "gpt-4o-mini",
         messages: [
             {
                 role: "system",
@@ -39,7 +34,6 @@ export async function POST(req: Request) {
         ],
         stream: true,
     });
-
-    // Convert the response to a proper stream
-    return new StreamingTextResponse(OpenAIStream(response as any));
+    const stream = OpenAIStream(response);
+    return new StreamingTextResponse(stream);
 }

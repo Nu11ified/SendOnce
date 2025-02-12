@@ -6,7 +6,7 @@ import { OramaManager } from "@/lib/orama";
 import { db } from "@/server/db";
 import { auth } from "@clerk/nextjs/server";
 import { getSubscriptionStatus } from "@/lib/stripe-actions";
-import { FREE_CREDITS_PER_DAY, AVG_INPUT_TOKENS_PER_MSG, AVG_OUTPUT_TOKENS_PER_MSG, TOTAL_TOKENS_PER_MSG } from "@/app/constants";
+import { FREE_CREDITS_PER_DAY } from "@/app/constants";
 
 // export const runtime = "edge";
 
@@ -15,32 +15,20 @@ const config = new Configuration({
 });
 const openai = new OpenAIApi(config);
 
-// Estimated tokens per message for GPT-4
-const ESTIMATED_TOKENS_PER_MESSAGE = 150;
-
 export async function POST(req: Request) {
     try {
         const { userId } = await auth()
         if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        // Get user's token balance
-        const tokenBalance = await db.tokenBalance.findUnique({
-            where: { userId }
-        });
-
-        const isSubscribed = await getSubscriptionStatus();
-        
-        if (!isSubscribed && !tokenBalance) {
-            // Free tier user with no token balance
+        const isSubscribed = await getSubscriptionStatus()
+        if (!isSubscribed) {
             const chatbotInteraction = await db.chatbotInteraction.findUnique({
                 where: {
                     day: new Date().toDateString(),
                     userId
                 }
-            });
-
+            })
             if (!chatbotInteraction) {
                 await db.chatbotInteraction.create({
                     data: {
@@ -48,61 +36,11 @@ export async function POST(req: Request) {
                         count: 1,
                         userId
                     }
-                });
+                })
             } else if (chatbotInteraction.count >= FREE_CREDITS_PER_DAY) {
-                return NextResponse.json({ 
-                    error: "Free tier message limit reached. Please upgrade to continue.", 
-                    type: "LIMIT_REACHED" 
-                }, { status: 429 });
-            } else {
-                await db.chatbotInteraction.update({
-                    where: {
-                        id: chatbotInteraction.id
-                    },
-                    data: {
-                        count: chatbotInteraction.count + 1
-                    }
-                });
+                return NextResponse.json({ error: "Limit reached" }, { status: 429 });
             }
-        } else if (tokenBalance) {
-            // Check if user has enough tokens
-            const availableTokens = (tokenBalance.monthlyTokens + tokenBalance.bonusTokens) - tokenBalance.usedTokens;
-            
-            if (availableTokens < TOTAL_TOKENS_PER_MSG) {
-                // Check if auto-refill is enabled
-                const subscription = await db.stripeSubscription.findUnique({
-                    where: { userId }
-                });
-
-                if (subscription?.autoRefillEnabled && 
-                    availableTokens <= subscription.autoRefillThreshold) {
-                    // TODO: Trigger auto-refill purchase
-                    // This would be handled by a separate endpoint/function
-                    return NextResponse.json({ 
-                        error: "Insufficient tokens. Auto-refill in progress.", 
-                        type: "AUTO_REFILL_TRIGGERED" 
-                    }, { status: 402 });
-                }
-
-                return NextResponse.json({ 
-                    error: "Insufficient tokens. Please purchase more to continue.", 
-                    type: "INSUFFICIENT_TOKENS",
-                    availableTokens,
-                    requiredTokens: TOTAL_TOKENS_PER_MSG
-                }, { status: 402 });
-            }
-
-            // Update token usage
-            await db.tokenBalance.update({
-                where: { userId },
-                data: {
-                    usedTokens: {
-                        increment: TOTAL_TOKENS_PER_MSG
-                    }
-                }
-            });
         }
-
         const { messages, accountId } = await req.json();
         const oramaManager = new OramaManager(accountId)
         await oramaManager.initialize()
@@ -134,7 +72,7 @@ export async function POST(req: Request) {
 
 
         const response = await openai.createChatCompletion({
-            model: "gpt-4o-mini-2024-07-18",
+            model: "gpt-4o-mini",
             messages: [
                 prompt,
                 ...messages.filter((message: Message) => message.role === "user"),
@@ -161,7 +99,7 @@ export async function POST(req: Request) {
         });
         return new StreamingTextResponse(stream);
     } catch (error) {
-        console.error('Error in chat route:', error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        console.log(error)
+        return NextResponse.json({ error: "error" }, { status: 500 });
     }
 }
