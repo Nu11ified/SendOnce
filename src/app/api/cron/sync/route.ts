@@ -7,6 +7,12 @@ export const maxDuration = 60; // 60 seconds timeout
 
 // This endpoint should be called every 5 minutes by cron
 export async function GET(req: Request) {
+    // Verify the request is authorized
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         const BATCH_SIZE = 3; // Process 3 accounts per run to stay within time limit
         
