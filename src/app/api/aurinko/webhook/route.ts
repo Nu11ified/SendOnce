@@ -56,12 +56,18 @@ export const POST = async (req: NextRequest) => {
             const payload = JSON.parse(body) as AurinkoNotification;
             console.log("Webhook: Received notification:", JSON.stringify(payload, null, 2));
             
-            // Find account by Aurinko's account ID in the token
+            // Find account by Aurinko's account ID
             const accounts = await db.account.findMany({
                 where: {
-                    token: {
-                        contains: payload.accountId.toString()
-                    }
+                    provider: 'aurinko',
+                    AND: [
+                        {
+                            OR: [
+                                { token: { contains: `access_token` } },
+                                { token: { contains: `Bearer` } }
+                            ]
+                        }
+                    ]
                 }
             });
 
@@ -69,6 +75,8 @@ export const POST = async (req: NextRequest) => {
                 console.error("Webhook: No accounts found for Aurinko ID", payload.accountId);
                 return new Response("Account not found", { status: 404 });
             }
+
+            console.log(`Webhook: Found ${accounts.length} accounts to process`);
 
             // Process each matching account
             for (const notifiedAccount of accounts) {
