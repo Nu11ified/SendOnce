@@ -27,11 +27,14 @@ class Account {
     }
 
     async createSubscription() {
-        const webhookUrl = process.env.NODE_ENV === 'development' ? 'https://potatoes-calculator-reports-crisis.trycloudflare.com' : process.env.NEXT_PUBLIC_URL
+        const webhookUrl = process.env.NODE_ENV === 'development' 
+            ? 'https://potatoes-calculator-reports-crisis.trycloudflare.com/api/aurinko/webhook'
+            : `${process.env.NEXT_PUBLIC_URL}/api/aurinko/webhook`;
+        
         const res = await axios.post('https://api.aurinko.io/v1/subscriptions',
             {
                 resource: '/email/messages',
-                notificationUrl: webhookUrl + '/api/aurinko/webhook'
+                notificationUrl: webhookUrl
             },
             {
                 headers: {
@@ -107,7 +110,7 @@ class Account {
     async performInitialSync() {
         try {
             // Start the sync process
-            const daysWithin = 3
+            const daysWithin = 30
             let syncResponse = await this.startSync(daysWithin); // Sync emails from the last 7 days
 
             // Wait until the sync is ready
@@ -262,10 +265,10 @@ class Account {
         })
         return res.data
     }
-}
-type EmailAddress = {
+}type EmailAddress = {
     name: string;
     address: string;
 }
 
 export default Account;
+

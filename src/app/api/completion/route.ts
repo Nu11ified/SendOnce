@@ -1,12 +1,15 @@
 import { OpenAIStream, StreamingTextResponse, streamText } from 'ai';
-import { openai } from '@ai-sdk/openai';
-import { createStreamableValue } from 'ai/rsc';
+import { Configuration, OpenAIApi } from "openai-edge";
 
 export interface Message {
     role: 'user' | 'assistant';
     content: string;
 }
 
+const config = new Configuration({
+    apiKey: process.env.OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(config);
 
 export async function POST(req: Request) {
     // extract the prompt from the body

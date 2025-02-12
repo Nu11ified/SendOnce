@@ -20,8 +20,8 @@ const PremiumBanner = () => {
 
     if (isSubscribed) return (
         <motion.div layout className="bg-gray-900 relative p-4 rounded-lg border overflow-hidden flex flex-col md:flex-row gap-4">
-            <img src='/bot.webp' className='md:absolute md:-bottom-6 md:-right-10 h-[180px] w-auto' />
-            <div>
+            <img src='/bot.webp' className='md:absolute md:-bottom-6 md:-right-10 h-[180px] w-auto pointer-events-none' />
+            <div className='relative z-10'>
                 <h1 className='text-white text-xl font-semibold'>Premium Plan</h1>
                 <div className="h-2"></div>
                 <p className='text-gray-400 text-sm md:max-w-[calc(100%-70px)]'>Ask as many questions as you want</p>
@@ -33,8 +33,8 @@ const PremiumBanner = () => {
 
     return (
         <motion.div layout className="bg-gray-900 relative p-4 rounded-lg border overflow-hidden flex flex-col md:flex-row gap-4">
-            <img src='/bot.webp' className='md:absolute md:-bottom-6 md:-right-10 h-[180px] w-auto' />
-            <div>
+            <img src='/bot.webp' className='md:absolute md:-bottom-6 md:-right-10 h-[180px] w-auto pointer-events-none' />
+            <div className='relative z-10'>
                 <div className="flex items-center gap-2">
                     <h1 className='text-white text-xl font-semibold'>Basic Plan</h1>
                     <p className='text-gray-400 text-sm md:max-w-[calc(100%-0px)]'>{remainingCredits} / {FREE_CREDITS_PER_DAY} messages remaining</p>

@@ -19,7 +19,7 @@ const transitionDebug = {
 };
 const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
     const [accountId] = useLocalStorage('accountId', '')
-    const { input, handleInputChange, handleSubmit, messages } = useChat({
+    const { input, handleInputChange, handleSubmit, messages, setInput } = useChat({
         api: "/api/chat",
         body: {
             accountId,
@@ -81,45 +81,48 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
                         </div>
                         <div className="h-2"></div>
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span onClick={() => handleInputChange({
-                                target: {
-                                    value: 'What can I ask?'
-                                }
-                            })} className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs'>What can I ask?</span>
-                            <span onClick={() => handleInputChange({
-                                target: {
-                                    value: 'When is my next flight?'
-                                }
-                            })} className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs'>When is my next flight?</span>
-                            <span onClick={() => handleInputChange({
-                                target: {
-                                    value: 'When is my next meeting?'
-                                }
-                            })} className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs'>When is my next meeting?</span>
+                            <span 
+                                onClick={() => setInput('What can I ask?')} 
+                                className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs cursor-pointer hover:bg-gray-700'
+                            >
+                                What can I ask?
+                            </span>
+                            <span 
+                                onClick={() => setInput('When is my next flight?')} 
+                                className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs cursor-pointer hover:bg-gray-700'
+                            >
+                                When is my next flight?
+                            </span>
+                            <span 
+                                onClick={() => setInput('When is my next meeting?')} 
+                                className='px-2 py-1 bg-gray-800 text-gray-200 rounded-md text-xs cursor-pointer hover:bg-gray-700'
+                            >
+                                When is my next meeting?
+                            </span>
                         </div>
                     </div>
                     }
-                    <form onSubmit={handleSubmit} className="flex w-full">
+                    <form onSubmit={handleSubmit} className="flex w-full relative">
                         <input
                             type="text"
                             onChange={handleInputChange}
                             value={input}
-                            className="py- relative h-9 placeholder:text-[13px] flex-grow rounded-full border border-gray-200 bg-white px-3 text-[15px] outline-none placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-blue-500/20 focus-visible:ring-offset-1
+                            className="py- relative h-9 placeholder:text-[13px] w-full rounded-full border border-gray-200 bg-white px-3 text-[15px] outline-none placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-blue-500/20 focus-visible:ring-offset-1
             dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400 dark:focus-visible:ring-blue-500/20 dark:focus-visible:ring-offset-1 dark:focus-visible:ring-offset-gray-700
-            "
+            min-w-0"
                             placeholder="Ask AI anything about your emails"
                         />
                         <motion.div
                             key={messages.length}
                             layout="position"
-                            className="pointer-events-none absolute z-10 flex h-9 w-[250px] items-center overflow-hidden break-words rounded-full bg-gray-200 [word-break:break-word] dark:bg-gray-800"
+                            className="pointer-events-none absolute z-10 flex h-9 max-w-[calc(100%-3rem)] items-center overflow-hidden break-words rounded-full bg-gray-200 [word-break:break-word] dark:bg-gray-800"
                             layoutId={`container-[${messages.length}]`}
                             transition={transitionDebug}
                             initial={{ opacity: 0.6, zIndex: -1 }}
                             animate={{ opacity: 0.6, zIndex: -1 }}
                             exit={{ opacity: 1, zIndex: 1 }}
                         >
-                            <div className="px-3 py-2 text-[15px] leading-[15px] text-gray-900 dark:text-gray-100">
+                            <div className="px-3 py-2 text-[15px] leading-[15px] text-gray-900 dark:text-gray-100 truncate">
                                 {input}
                             </div>
                         </motion.div>
