@@ -60,19 +60,23 @@ export const POST = async (req: NextRequest) => {
             const accounts = await db.account.findMany({
                 where: {
                     provider: 'aurinko',
-                    AND: [
-                        {
-                            OR: [
-                                { token: { contains: `access_token` } },
-                                { token: { contains: `Bearer` } }
-                            ]
-                        }
-                    ]
+                    token: {
+                        contains: `"accountId":${payload.accountId}`
+                    }
                 }
             });
 
             if (!accounts || accounts.length === 0) {
                 console.error("Webhook: No accounts found for Aurinko ID", payload.accountId);
+                // Try to find any Aurinko accounts for debugging
+                const allAurinkoAccounts = await db.account.findMany({
+                    where: { provider: 'aurinko' },
+                    select: { id: true, token: true }
+                });
+                console.log("Webhook: All Aurinko accounts:", allAurinkoAccounts.map(acc => ({
+                    id: acc.id,
+                    tokenPreview: acc.token.substring(0, 50) + '...'
+                })));
                 return new Response("Account not found", { status: 404 });
             }
 

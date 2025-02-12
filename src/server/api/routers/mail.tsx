@@ -349,4 +349,32 @@ export const mailRouter = createTRPCRouter({
             remainingCredits
         }
     }),
+    unlinkAccount: protectedProcedure.input(z.object({
+        accountId: z.string(),
+    })).mutation(async ({ ctx, input }) => {
+        // Verify account ownership
+        const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId);
+        
+        // Delete all related data
+        await ctx.db.$transaction([
+            // Delete all email addresses
+            ctx.db.emailAddress.deleteMany({
+                where: { accountId: input.accountId }
+            }),
+            // Delete all emails in threads
+            ctx.db.email.deleteMany({
+                where: { thread: { accountId: input.accountId } }
+            }),
+            // Delete all threads
+            ctx.db.thread.deleteMany({
+                where: { accountId: input.accountId }
+            }),
+            // Finally delete the account
+            ctx.db.account.delete({
+                where: { id: input.accountId }
+            })
+        ]);
+
+        return { success: true };
+    }),
 });
