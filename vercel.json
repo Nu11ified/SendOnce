@@ -1,11 +1,6 @@
 {
     "version": 2,
-    "buildCommand": "next build",
     "functions": {
-        "api/**/*": {
-            "memory": 1024,
-            "maxDuration": 60
-        },
         "api/cron/sync": {
             "maxDuration": 60
         }
