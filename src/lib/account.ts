@@ -12,7 +12,7 @@ class Account {
         this.token = token;
     }
 
-    private async startSync(daysWithin: number): Promise<SyncResponse> {
+    public async startSync(daysWithin: number): Promise<SyncResponse> {
         const response = await axios.post<SyncResponse>(
             `${API_BASE_URL}/email/sync`,
             {},
