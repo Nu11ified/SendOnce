@@ -11,13 +11,7 @@ class Account {
 
     constructor(token: string) {
         this.token = token;
-        try {
-            const parsedToken = JSON.parse(token);
-            this.accessToken = parsedToken.accessToken;
-        } catch (e) {
-            // Fallback for old format where token was just the access token
-            this.accessToken = token;
-        }
+        this.accessToken = token; // Token is now directly the access token
     }
 
     private getHeaders() {
@@ -137,15 +131,14 @@ class Account {
             }
             console.log('Sync is ready');
 
-            // Get account ID from token
-            let accountId: string;
-            try {
-                const tokenData = JSON.parse(this.token);
-                accountId = tokenData.accountId.toString();
-            } catch (e) {
-                console.error('Failed to parse token for account ID:', e);
-                throw new Error('Invalid token format');
+            // Get account ID by querying the database
+            const account = await db.account.findUnique({
+                where: { token: this.token }
+            });
+            if (!account) {
+                throw new Error('Account not found');
             }
+            const accountId = account.id;
 
             // Perform initial sync of updated emails
             let storedDeltaToken: string = syncResponse.syncUpdatedToken;

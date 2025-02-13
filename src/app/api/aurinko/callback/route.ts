@@ -45,11 +45,8 @@ export const GET = async (req: NextRequest) => {
         // Extract account ID from token response
         const accountId = token.accountId.toString();
 
-        // Store token as JSON object with both access token and account ID
-        const tokenObject = {
-            accessToken: token.accessToken,
-            accountId: token.accountId
-        };
+        // Store token as JSON string with both access token and account ID
+        const tokenString = token.accessToken;
 
         // Check if we already have an account with this email
         const existingAccount = await db.account.findFirst({
@@ -66,7 +63,7 @@ export const GET = async (req: NextRequest) => {
             provider: 'aurinko',
             emailAddress: profile.email,
             name: profile.name,
-            tokenPreview: JSON.stringify(tokenObject).substring(0, 50) + '...'
+            tokenPreview: tokenString.substring(0, 50) + '...'
         });
 
         let dbAccount;
@@ -76,7 +73,7 @@ export const GET = async (req: NextRequest) => {
                 where: { id: existingAccount.id },
                 data: {
                     id: accountId,
-                    token: JSON.stringify(tokenObject),
+                    token: tokenString,
                     emailAddress: profile.email,
                     name: profile.name
                 }
@@ -87,7 +84,7 @@ export const GET = async (req: NextRequest) => {
                 data: {
                     id: accountId,
                     userId,
-                    token: JSON.stringify(tokenObject),
+                    token: tokenString,
                     provider: 'aurinko',
                     emailAddress: profile.email,
                     name: profile.name
@@ -99,7 +96,7 @@ export const GET = async (req: NextRequest) => {
 
         // Create subscription for webhooks
         console.log('Callback: Creating webhook subscription');
-        const account = new Account(token.accessToken);
+        const account = new Account(tokenString);
         await account.createSubscription();
         console.log('Callback: Successfully created webhook subscription');
 
