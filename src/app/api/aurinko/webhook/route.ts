@@ -66,42 +66,30 @@ export const POST = async (req: NextRequest) => {
             console.log(`Webhook: Found ${accounts.length} Aurinko accounts`);
             console.log('Webhook: Looking for account with Aurinko ID:', payload.accountId);
 
-            // Parse tokens and find matching account
+            // Find matching account
             let matchingAccount = null;
             for (const account of accounts) {
                 try {
                     console.log(`Webhook: Checking account ${account.id}`);
-                    console.log('Webhook: Account token:', account.token);
-                    const tokenData = JSON.parse(account.token);
-                    console.log(`Webhook: Parsed token data for account ${account.id}:`, tokenData);
                     
-                    // Update the account ID in the database to match Aurinko's ID
-                    if (account.emailAddress === 'manasr224@gmail.com') { // TODO: Replace with dynamic email check
-                        console.log(`Webhook: Found matching account by email: ${account.id}`);
-                        // Update the account ID and token
+                    // Update the account ID to match Aurinko's ID
+                    if (account.id !== payload.accountId.toString()) {
+                        console.log(`Webhook: Updating account ID from ${account.id} to ${payload.accountId}`);
                         await db.account.update({
                             where: { id: account.id },
-                            data: {
-                                id: payload.accountId.toString(),
-                                token: JSON.stringify({
-                                    ...tokenData,
-                                    accountId: payload.accountId
-                                })
-                            }
+                            data: { id: payload.accountId.toString() }
                         });
                         matchingAccount = {
                             ...account,
-                            id: payload.accountId.toString(),
-                            token: JSON.stringify({
-                                ...tokenData,
-                                accountId: payload.accountId
-                            })
+                            id: payload.accountId.toString()
                         };
+                        break;
+                    } else {
+                        matchingAccount = account;
                         break;
                     }
                 } catch (e) {
-                    console.error(`Webhook: Failed to parse token for account ${account.id}:`, e);
-                    console.error('Webhook: Raw token:', account.token);
+                    console.error(`Webhook: Failed to process account ${account.id}:`, e);
                 }
             }
 

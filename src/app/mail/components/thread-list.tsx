@@ -15,6 +15,8 @@ import { useAutoAnimate } from "@formkit/auto-animate/react"
 import { useLocalStorage } from "usehooks-ts"
 import useThreads from "../use-threads"
 import { isSearchingAtom } from "./search-bar"
+import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 
 import { format } from "date-fns";
 
@@ -24,6 +26,30 @@ export function ThreadList() {
   const [threadId, setThreadId] = useThread();
   const [parent] = useAutoAnimate(/* optional config */);
   const { selectedThreadIds, visualMode } = useVim();
+  const [accountId] = useLocalStorage("accountId", "");
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
+
+  const syncHistorical = api.mail.syncHistoricalEmails.useMutation({
+    onSuccess: (result) => {
+      setIsLoadingMore(false);
+      toast.success(`Synced ${result.count} historical emails`);
+      if (result.oldestEmail) {
+        toast.info(`Oldest email from ${result.oldestEmail.toLocaleDateString()}`);
+      }
+    },
+    onError: (error) => {
+      setIsLoadingMore(false);
+      toast.error(error.message);
+    }
+  });
+
+  const handleLoadMore = async () => {
+    setIsLoadingMore(true);
+    syncHistorical.mutate({
+      accountId,
+      daysToSync: 30 // Sync another 30 days
+    });
+  };
 
   const groupedThreads = threads?.reduce((acc, thread) => {
     const date = format(thread.lastMessageDate ?? new Date(), "yyyy-MM-dd");
@@ -113,6 +139,17 @@ export function ThreadList() {
           </React.Fragment>
         ))}
       </div>
+      {threads && threads.length > 0 && (
+        <div className="p-4 flex justify-center">
+          <Button 
+            variant="outline" 
+            onClick={handleLoadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? "Loading..." : "Load More History"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

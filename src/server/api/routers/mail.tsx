@@ -184,7 +184,7 @@ export const mailRouter = createTRPCRouter({
                 to: [lastExternalEmail.from],
                 cc: [],
                 from: { name: account.name, address: account.emailAddress },
-                subject: `${lastExternalEmail.subject}`,
+                subject: lastExternalEmail.subject?.substring(0, 255) || '',
                 id: lastExternalEmail.internetMessageId
             };
         } else if (input.replyType === 'replyAll') {
@@ -192,7 +192,7 @@ export const mailRouter = createTRPCRouter({
                 to: [lastExternalEmail.from, ...lastExternalEmail.to.filter(addr => addr.id !== account.id)],
                 cc: lastExternalEmail.cc.filter(addr => addr.id !== account.id),
                 from: { name: account.name, address: account.emailAddress },
-                subject: `${lastExternalEmail.subject}`,
+                subject: lastExternalEmail.subject?.substring(0, 255) || '',
                 id: lastExternalEmail.internetMessageId
             };
         }
@@ -376,5 +376,16 @@ export const mailRouter = createTRPCRouter({
         ]);
 
         return { success: true };
+    }),
+    syncHistoricalEmails: protectedProcedure.input(z.object({
+        accountId: z.string(),
+        daysToSync: z.number().min(1).max(365) // Limit to 1 year max
+    })).mutation(async ({ ctx, input }) => {
+        const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId);
+        if (!account) throw new Error("Invalid token");
+        
+        const acc = new Account(account.token);
+        const result = await acc.syncHistoricalEmails(input.daysToSync);
+        return result;
     }),
 });

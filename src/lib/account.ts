@@ -29,6 +29,7 @@ class Account {
     }
 
     private async startSync(daysWithin: number): Promise<SyncResponse> {
+        console.log(`Starting sync for past ${daysWithin} days`);
         const response = await axios.post<SyncResponse>(
             `${API_BASE_URL}/email/sync`,
             {},
@@ -36,7 +37,8 @@ class Account {
                 headers: this.getHeaders(),
                 params: {
                     daysWithin,
-                    bodyType: 'html'
+                    bodyType: 'html',
+                    includeHistory: true
                 }
             }
         );
@@ -290,6 +292,67 @@ class Account {
             }
         })
         return res.data
+    }
+
+    async syncHistoricalEmails(daysToSync: number) {
+        console.log(`Starting historical sync for ${daysToSync} days`);
+        try {
+            // Start the sync process
+            let syncResponse = await this.startSync(daysToSync);
+            console.log('Historical sync response:', syncResponse);
+
+            // Wait until the sync is ready
+            while (!syncResponse.ready) {
+                console.log('Waiting for historical sync to be ready...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                syncResponse = await this.startSync(daysToSync);
+            }
+            console.log('Historical sync is ready');
+
+            // Get account ID by querying the database
+            const account = await db.account.findUnique({
+                where: { token: this.token }
+            });
+            if (!account) {
+                throw new Error('Account not found');
+            }
+
+            // Perform sync of historical emails
+            let storedDeltaToken: string = syncResponse.syncUpdatedToken;
+            console.log('Getting historical emails with token:', storedDeltaToken);
+            let updatedResponse = await this.getUpdatedEmails({ deltaToken: syncResponse.syncUpdatedToken });
+            console.log('Got historical emails:', updatedResponse.records.length);
+            
+            let allEmails: EmailMessage[] = updatedResponse.records;
+
+            // Fetch all pages if there are more
+            while (updatedResponse.nextPageToken) {
+                console.log('Getting next page of historical emails');
+                updatedResponse = await this.getUpdatedEmails({ pageToken: updatedResponse.nextPageToken });
+                allEmails = allEmails.concat(updatedResponse.records);
+                console.log('Total historical emails so far:', allEmails.length);
+            }
+
+            console.log('Total historical emails to sync:', allEmails.length);
+            
+            // Store emails in database
+            try {
+                console.log('Syncing historical emails to database');
+                await syncEmailsToDatabase(allEmails, account.id);
+                console.log('Successfully synced historical emails to database');
+            } catch (error) {
+                console.error('Failed to sync historical emails to database:', error);
+                throw error;
+            }
+
+            return {
+                count: allEmails.length,
+                oldestEmail: allEmails.length > 0 ? new Date(allEmails[allEmails.length - 1]?.sentAt ?? new Date()) : null
+            };
+        } catch (error) {
+            console.error('Error during historical sync:', error);
+            throw error;
+        }
     }
 }
 type EmailAddress = {
