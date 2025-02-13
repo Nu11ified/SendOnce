@@ -37,21 +37,23 @@ export const GET = async (req: NextRequest) => {
         }
         console.log('Callback: Successfully got token from Aurinko');
 
-        // Create account instance and get profile
-        const account = new Account(token.accessToken);
-        console.log('Callback: Getting profile from Aurinko');
-        const profile = await account.getProfile();
-        console.log('Callback: Got profile:', JSON.stringify(profile, null, 2));
+        // Get account details using the imported function
+        console.log('Callback: Getting account details from Aurinko');
+        const profile = await getAccountDetails(token.accessToken);
+        console.log('Callback: Got account details:', JSON.stringify(profile, null, 2));
+
+        // Extract account ID from token response
+        const accountId = token.accountId.toString();
 
         // Store token as JSON object with both access token and account ID
         const tokenObject = {
             accessToken: token.accessToken,
-            accountId: profile.id
+            accountId: token.accountId
         };
 
         // Create/update account in database
         console.log('Callback: Upserting account in database:', {
-            id: profile.id.toString(),
+            id: accountId,
             userId,
             provider: 'aurinko',
             emailAddress: profile.email,
@@ -61,10 +63,10 @@ export const GET = async (req: NextRequest) => {
 
         const dbAccount = await db.account.upsert({
             where: {
-                id: profile.id.toString()
+                id: accountId
             },
             create: {
-                id: profile.id.toString(),
+                id: accountId,
                 userId,
                 token: JSON.stringify(tokenObject),
                 provider: 'aurinko',
@@ -82,6 +84,7 @@ export const GET = async (req: NextRequest) => {
 
         // Create subscription for webhooks
         console.log('Callback: Creating webhook subscription');
+        const account = new Account(JSON.stringify(tokenObject));
         await account.createSubscription();
         console.log('Callback: Successfully created webhook subscription');
 
@@ -89,7 +92,7 @@ export const GET = async (req: NextRequest) => {
         console.log('Callback: Triggering initial sync');
         waitUntil(
             axios.post(`${process.env.NEXT_PUBLIC_URL}/api/initial-sync`, { 
-                accountId: profile.id.toString(), 
+                accountId, 
                 userId 
             }).then((res) => {
                 console.log('Callback: Initial sync triggered:', res.data);
