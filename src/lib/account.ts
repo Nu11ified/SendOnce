@@ -123,38 +123,68 @@ class Account {
 
     async performInitialSync() {
         try {
+            console.log('Starting initial sync');
             // Start the sync process
-            const daysWithin = 30
+            const daysWithin = 30;
             let syncResponse = await this.startSync(daysWithin);
+            console.log('Initial sync response:', syncResponse);
 
             // Wait until the sync is ready
             while (!syncResponse.ready) {
+                console.log('Waiting for sync to be ready...');
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 syncResponse = await this.startSync(daysWithin);
             }
+            console.log('Sync is ready');
+
+            // Get account ID from token
+            let accountId: string;
+            try {
+                const tokenData = JSON.parse(this.token);
+                accountId = tokenData.accountId.toString();
+            } catch (e) {
+                console.error('Failed to parse token for account ID:', e);
+                throw new Error('Invalid token format');
+            }
 
             // Perform initial sync of updated emails
-            let storedDeltaToken: string = syncResponse.syncUpdatedToken
+            let storedDeltaToken: string = syncResponse.syncUpdatedToken;
+            console.log('Getting updated emails with token:', storedDeltaToken);
             let updatedResponse = await this.getUpdatedEmails({ deltaToken: syncResponse.syncUpdatedToken });
+            console.log('Got updated emails:', updatedResponse.records.length);
+            
             if (updatedResponse.nextDeltaToken) {
-                storedDeltaToken = updatedResponse.nextDeltaToken
+                storedDeltaToken = updatedResponse.nextDeltaToken;
             }
             let allEmails: EmailMessage[] = updatedResponse.records;
 
             // Fetch all pages if there are more
             while (updatedResponse.nextPageToken) {
+                console.log('Getting next page of emails');
                 updatedResponse = await this.getUpdatedEmails({ pageToken: updatedResponse.nextPageToken });
                 allEmails = allEmails.concat(updatedResponse.records);
+                console.log('Total emails so far:', allEmails.length);
                 if (updatedResponse.nextDeltaToken) {
-                    storedDeltaToken = updatedResponse.nextDeltaToken
+                    storedDeltaToken = updatedResponse.nextDeltaToken;
                 }
+            }
+
+            console.log('Total emails to sync:', allEmails.length);
+            
+            // Store emails in database
+            try {
+                console.log('Syncing emails to database');
+                await syncEmailsToDatabase(allEmails, accountId);
+                console.log('Successfully synced emails to database');
+            } catch (error) {
+                console.error('Failed to sync emails to database:', error);
+                throw error;
             }
 
             return {
                 emails: allEmails,
                 deltaToken: storedDeltaToken,
-            }
-
+            };
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 console.error('Error during sync:', JSON.stringify(error.response?.data, null, 2));
