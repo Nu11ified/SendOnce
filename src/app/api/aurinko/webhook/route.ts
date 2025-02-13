@@ -56,99 +56,71 @@ export const POST = async (req: NextRequest) => {
             const payload = JSON.parse(body) as AurinkoNotification;
             console.log("Webhook: Received notification:", JSON.stringify(payload, null, 2));
             
-            // Find account by Aurinko's account ID
+            // Find all accounts with matching Aurinko ID
             const accounts = await db.account.findMany({
                 where: {
-                    provider: 'aurinko',
-                    token: {
-                        contains: `"accountId": ${payload.accountId}`
-                    }
+                    provider: 'aurinko'
                 }
             });
 
-            if (!accounts || accounts.length === 0) {
-                // Try alternative format
-                const accountsAlt = await db.account.findMany({
-                    where: {
-                        provider: 'aurinko',
-                        token: {
-                            contains: `"accountId":${payload.accountId}`
-                        }
-                    }
-                });
+            console.log(`Found ${accounts.length} Aurinko accounts`);
 
-                if (accountsAlt && accountsAlt.length > 0) {
-                    console.log(`Webhook: Found ${accountsAlt.length} accounts with alternative format`);
-                    accounts.push(...accountsAlt);
-                } else {
-                    console.error("Webhook: No accounts found for Aurinko ID", payload.accountId);
-                    // Try to find any Aurinko accounts for debugging
-                    const allAurinkoAccounts = await db.account.findMany({
-                        where: { provider: 'aurinko' },
-                        select: { id: true, token: true }
-                    });
-                    console.log("Webhook: All Aurinko accounts:", allAurinkoAccounts.map(acc => {
-                        const token = acc.token;
-                        try {
-                            const parsed = JSON.parse(token);
-                            return {
-                                id: acc.id,
-                                tokenPreview: token.substring(0, 100) + '...',
-                                parsedAccountId: parsed.accountId,
-                                hasAccountId: token.includes('accountId')
-                            };
-                        } catch (e) {
-                            return {
-                                id: acc.id,
-                                tokenPreview: token.substring(0, 100) + '...',
-                                parseError: true,
-                                hasAccountId: token.includes('accountId')
-                            };
-                        }
-                    }));
-                    return new Response("Account not found", { status: 404 });
+            // Parse tokens and find matching account
+            let matchingAccount = null;
+            for (const account of accounts) {
+                try {
+                    const tokenData = JSON.parse(account.token);
+                    console.log(`Account ${account.id} token data:`, tokenData);
+                    if (tokenData.accountId === payload.accountId) {
+                        console.log(`Found matching account: ${account.id}`);
+                        matchingAccount = account;
+                        break;
+                    }
+                } catch (e) {
+                    console.error(`Failed to parse token for account ${account.id}:`, e);
                 }
             }
 
-            console.log(`Webhook: Found ${accounts.length} accounts to process`);
+            if (!matchingAccount) {
+                console.error(`No account found for Aurinko ID ${payload.accountId}`);
+                return new Response("Account not found", { status: 404 });
+            }
 
-            // Process each matching account
-            for (const notifiedAccount of accounts) {
-                console.log(`Webhook: Processing account ${notifiedAccount.id} (Aurinko ID: ${payload.accountId})`);
-                
-                // Initialize search index
-                const oramaManager = new OramaManager(notifiedAccount.id);
-                await oramaManager.initialize();
-                console.log("Webhook: Search index initialized");
+            // Process the notification with the matching account
+            console.log(`Webhook: Processing account ${matchingAccount.id} (Aurinko ID: ${payload.accountId})`);
+            
+            // Initialize search index
+            const oramaManager = new OramaManager(matchingAccount.id);
+            await oramaManager.initialize();
+            console.log("Webhook: Search index initialized");
 
-                // Sync the account
-                try {
-                    const acc = new Account(notifiedAccount.token);
-                    if (!notifiedAccount.nextDeltaToken) {
-                        console.log('Webhook: No delta token found, performing initial sync');
-                        const response = await acc.performInitialSync();
-                        if (response) {
-                            await db.account.update({
-                                where: { id: notifiedAccount.id },
-                                data: { 
-                                    nextDeltaToken: response.deltaToken,
-                                    lastSyncedAt: new Date()
-                                }
-                            });
-                            console.log('Webhook: Initial sync completed');
-                        }
-                    } else {
-                        console.log('Webhook: Performing incremental sync');
-                        await acc.syncEmails();
+            // Sync the account
+            try {
+                const acc = new Account(matchingAccount.token);
+                if (!matchingAccount.nextDeltaToken) {
+                    console.log('Webhook: No delta token found, performing initial sync');
+                    const response = await acc.performInitialSync();
+                    if (response) {
                         await db.account.update({
-                            where: { id: notifiedAccount.id },
-                            data: { lastSyncedAt: new Date() }
+                            where: { id: matchingAccount.id },
+                            data: { 
+                                nextDeltaToken: response.deltaToken,
+                                lastSyncedAt: new Date()
+                            }
                         });
-                        console.log('Webhook: Incremental sync completed');
+                        console.log('Webhook: Initial sync completed');
                     }
-                } catch (error) {
-                    console.error(`Webhook: Failed to sync account ${notifiedAccount.id}:`, error);
+                } else {
+                    console.log('Webhook: Performing incremental sync');
+                    await acc.syncEmails();
+                    await db.account.update({
+                        where: { id: matchingAccount.id },
+                        data: { lastSyncedAt: new Date() }
+                    });
+                    console.log('Webhook: Incremental sync completed');
                 }
+            } catch (error) {
+                console.error(`Webhook: Failed to sync account ${matchingAccount.id}:`, error);
             }
         }
 

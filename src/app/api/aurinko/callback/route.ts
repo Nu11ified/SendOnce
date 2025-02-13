@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { auth } from "@clerk/nextjs/server";
 import axios from "axios";
 import { type NextRequest, NextResponse } from "next/server";
+import Account from "@/lib/account";
 
 export const GET = async (req: NextRequest) => {
     const { userId } = await auth()
@@ -17,23 +18,47 @@ export const GET = async (req: NextRequest) => {
     const token = await getAurinkoToken(code as string)
     if (!token) return NextResponse.json({ error: "Failed to fetch token" }, { status: 400 });
     const accountDetails = await getAccountDetails(token.accessToken)
-    await db.account.upsert({
-        where: { id: token.accountId.toString() },
+    
+    const account = new Account(token.accessToken);
+    const profile = await account.getProfile();
+    console.log('Received profile from Aurinko:', profile);
+
+    // Store token as JSON object with both access token and account ID
+    const tokenObject = {
+        accessToken: token.accessToken,
+        accountId: profile.id
+    };
+
+    console.log('Callback: Creating/updating account with:', {
+        id: profile.id.toString(),
+        provider: 'aurinko',
+        emailAddress: profile.email,
+        tokenPreview: JSON.stringify(tokenObject).substring(0, 100) + '...'
+    });
+
+    const dbAccount = await db.account.upsert({
+        where: {
+            id: profile.id.toString()
+        },
         create: {
-            id: token.accountId.toString(),
+            id: profile.id.toString(),
             userId,
-            token: token.accessToken,
+            token: JSON.stringify(tokenObject),
             provider: 'aurinko',
-            emailAddress: accountDetails.email,
-            name: accountDetails.name
+            emailAddress: profile.email,
+            name: profile.name
         },
         update: {
-            token: token.accessToken,
+            token: JSON.stringify(tokenObject),
+            emailAddress: profile.email,
+            name: profile.name
         }
-    })
-    waitUntil(
+    });
 
-        axios.post(`${process.env.NEXT_PUBLIC_URL}/api/initial-sync`, { accountId: token.accountId.toString(), userId }).then((res) => {
+    console.log('Stored account in database:', dbAccount);
+
+    waitUntil(
+        axios.post(`${process.env.NEXT_PUBLIC_URL}/api/initial-sync`, { accountId: profile.id.toString(), userId }).then((res) => {
             console.log(res.data)
         }).catch((err) => {
             console.log(err.response.data)

@@ -7,9 +7,31 @@ const API_BASE_URL = 'https://api.aurinko.io/v1';
 
 class Account {
     private token: string;
+    private accessToken: string;
 
     constructor(token: string) {
         this.token = token;
+        try {
+            const parsedToken = JSON.parse(token);
+            this.accessToken = parsedToken.accessToken;
+        } catch (e) {
+            // Fallback for old format where token was just the access token
+            this.accessToken = token;
+        }
+    }
+
+    private getHeaders() {
+        return {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json'
+        };
+    }
+
+    async getProfile() {
+        const res = await axios.get('https://api.aurinko.io/v1/users/me', {
+            headers: this.getHeaders()
+        });
+        return res.data;
     }
 
     private async startSync(daysWithin: number): Promise<SyncResponse> {
@@ -34,10 +56,7 @@ class Account {
                 notificationUrl: webhookUrl + '/api/aurinko/webhook'
             },
             {
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json'
-                }
+                headers: this.getHeaders()
             }
         )
         return res.data
