@@ -51,6 +51,14 @@ export const GET = async (req: NextRequest) => {
             accountId: token.accountId
         };
 
+        // Check if we already have an account with this email
+        const existingAccount = await db.account.findFirst({
+            where: {
+                emailAddress: profile.email,
+                provider: 'aurinko'
+            }
+        });
+
         // Create/update account in database
         console.log('Callback: Upserting account in database:', {
             id: accountId,
@@ -61,24 +69,31 @@ export const GET = async (req: NextRequest) => {
             tokenPreview: JSON.stringify(tokenObject).substring(0, 50) + '...'
         });
 
-        const dbAccount = await db.account.upsert({
-            where: {
-                id: accountId
-            },
-            create: {
-                id: accountId,
-                userId,
-                token: JSON.stringify(tokenObject),
-                provider: 'aurinko',
-                emailAddress: profile.email,
-                name: profile.name
-            },
-            update: {
-                token: JSON.stringify(tokenObject),
-                emailAddress: profile.email,
-                name: profile.name
-            }
-        });
+        let dbAccount;
+        if (existingAccount) {
+            // Update existing account with new token and ID
+            dbAccount = await db.account.update({
+                where: { id: existingAccount.id },
+                data: {
+                    id: accountId,
+                    token: JSON.stringify(tokenObject),
+                    emailAddress: profile.email,
+                    name: profile.name
+                }
+            });
+        } else {
+            // Create new account
+            dbAccount = await db.account.create({
+                data: {
+                    id: accountId,
+                    userId,
+                    token: JSON.stringify(tokenObject),
+                    provider: 'aurinko',
+                    emailAddress: profile.email,
+                    name: profile.name
+                }
+            });
+        }
 
         console.log('Callback: Successfully stored account in database');
 

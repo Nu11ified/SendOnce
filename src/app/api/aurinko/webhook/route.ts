@@ -75,12 +75,29 @@ export const POST = async (req: NextRequest) => {
                     const tokenData = JSON.parse(account.token);
                     console.log(`Webhook: Parsed token data for account ${account.id}:`, tokenData);
                     
-                    if (tokenData.accountId === payload.accountId) {
-                        console.log(`Webhook: Found matching account: ${account.id}`);
-                        matchingAccount = account;
+                    // Update the account ID in the database to match Aurinko's ID
+                    if (account.emailAddress === 'manasr224@gmail.com') { // TODO: Replace with dynamic email check
+                        console.log(`Webhook: Found matching account by email: ${account.id}`);
+                        // Update the account ID and token
+                        await db.account.update({
+                            where: { id: account.id },
+                            data: {
+                                id: payload.accountId.toString(),
+                                token: JSON.stringify({
+                                    ...tokenData,
+                                    accountId: payload.accountId
+                                })
+                            }
+                        });
+                        matchingAccount = {
+                            ...account,
+                            id: payload.accountId.toString(),
+                            token: JSON.stringify({
+                                ...tokenData,
+                                accountId: payload.accountId
+                            })
+                        };
                         break;
-                    } else {
-                        console.log(`Webhook: Account ${account.id} has accountId ${tokenData.accountId}, looking for ${payload.accountId}`);
                     }
                 } catch (e) {
                     console.error(`Webhook: Failed to parse token for account ${account.id}:`, e);
