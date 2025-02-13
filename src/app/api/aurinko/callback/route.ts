@@ -84,22 +84,28 @@ export const GET = async (req: NextRequest) => {
 
         // Create subscription for webhooks
         console.log('Callback: Creating webhook subscription');
-        const account = new Account(JSON.stringify(tokenObject));
+        const account = new Account(token.accessToken);
         await account.createSubscription();
         console.log('Callback: Successfully created webhook subscription');
 
         // Trigger initial sync
         console.log('Callback: Triggering initial sync');
-        waitUntil(
-            axios.post(`${process.env.NEXT_PUBLIC_URL}/api/initial-sync`, { 
-                accountId, 
-                userId 
-            }).then((res) => {
-                console.log('Callback: Initial sync triggered:', res.data);
-            }).catch((err) => {
-                console.error('Callback: Failed to trigger initial sync:', err.response?.data);
-            })
-        );
+        try {
+            const response = await account.performInitialSync();
+            if (response) {
+                await db.account.update({
+                    where: { id: accountId },
+                    data: { 
+                        nextDeltaToken: response.deltaToken,
+                        lastSyncedAt: new Date()
+                    }
+                });
+                console.log('Callback: Initial sync completed');
+            }
+        } catch (error) {
+            console.error('Callback: Failed to perform initial sync:', error);
+            // Continue with the redirect even if sync fails
+        }
 
         return NextResponse.redirect(new URL('/mail', req.url));
     } catch (error) {

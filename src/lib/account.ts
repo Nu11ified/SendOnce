@@ -28,7 +28,7 @@ class Account {
     }
 
     async getProfile() {
-        const res = await axios.get('https://api.aurinko.io/v1/users/me', {
+        const res = await axios.get(`${API_BASE_URL}/users/me`, {
             headers: this.getHeaders()
         });
         return res.data;
@@ -39,7 +39,8 @@ class Account {
             `${API_BASE_URL}/email/sync`,
             {},
             {
-                headers: { Authorization: `Bearer ${this.token}` }, params: {
+                headers: this.getHeaders(),
+                params: {
                     daysWithin,
                     bodyType: 'html'
                 }
@@ -86,14 +87,12 @@ class Account {
 
         if (!response) throw new Error("Failed to sync emails")
 
-
         try {
             await syncEmailsToDatabase(allEmails, account.id)
         } catch (error) {
             console.log('error', error)
         }
 
-        // console.log('syncEmails', response)
         await db.account.update({
             where: {
                 id: account.id,
@@ -105,7 +104,6 @@ class Account {
     }
 
     async getUpdatedEmails({ deltaToken, pageToken }: { deltaToken?: string, pageToken?: string }): Promise<SyncUpdatedResponse> {
-        // console.log('getUpdatedEmails', { deltaToken, pageToken });
         let params: Record<string, string> = {};
         if (deltaToken) {
             params.deltaToken = deltaToken;
@@ -117,7 +115,7 @@ class Account {
             `${API_BASE_URL}/email/sync/updated`,
             {
                 params,
-                headers: { Authorization: `Bearer ${this.token}` }
+                headers: this.getHeaders()
             }
         );
         return response.data;
@@ -127,20 +125,17 @@ class Account {
         try {
             // Start the sync process
             const daysWithin = 30
-            let syncResponse = await this.startSync(daysWithin); // Sync emails from the last 7 days
+            let syncResponse = await this.startSync(daysWithin);
 
             // Wait until the sync is ready
             while (!syncResponse.ready) {
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 syncResponse = await this.startSync(daysWithin);
             }
-
-            // console.log('Sync is ready. Tokens:', syncResponse);
 
             // Perform initial sync of updated emails
             let storedDeltaToken: string = syncResponse.syncUpdatedToken
             let updatedResponse = await this.getUpdatedEmails({ deltaToken: syncResponse.syncUpdatedToken });
-            // console.log('updatedResponse', updatedResponse)
             if (updatedResponse.nextDeltaToken) {
                 storedDeltaToken = updatedResponse.nextDeltaToken
             }
@@ -155,13 +150,6 @@ class Account {
                 }
             }
 
-            // console.log('Initial sync complete. Total emails:', allEmails.length);
-
-            // Store the nextDeltaToken for future incremental syncs
-
-
-            // Example of using the stored delta token for an incremental sync
-            // await this.performIncrementalSync(storedDeltaToken);
             return {
                 emails: allEmails,
                 deltaToken: storedDeltaToken,
@@ -173,9 +161,9 @@ class Account {
             } else {
                 console.error('Error during sync:', error);
             }
+            throw error;
         }
     }
-
 
     async sendEmail({
         from,
@@ -234,7 +222,6 @@ class Account {
             throw error;
         }
     }
-
 
     async getWebhooks() {
         type Response = {
