@@ -28,7 +28,7 @@ const LandingPage = async () => {
                         <div className="flex justify-between items-center h-16">
                             <div className="flex items-center gap-2">
                                 <Image 
-                                    src="/sendonce.png" 
+                                    src="/sendonce.svg" 
                                     alt="SendOnce Logo" 
                                     width={32} 
                                     height={32} 
