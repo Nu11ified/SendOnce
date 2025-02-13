@@ -63,26 +63,39 @@ export const POST = async (req: NextRequest) => {
                 }
             });
 
-            console.log(`Found ${accounts.length} Aurinko accounts`);
+            console.log(`Webhook: Found ${accounts.length} Aurinko accounts`);
+            console.log('Webhook: Looking for account with Aurinko ID:', payload.accountId);
 
             // Parse tokens and find matching account
             let matchingAccount = null;
             for (const account of accounts) {
                 try {
+                    console.log(`Webhook: Checking account ${account.id}`);
+                    console.log('Webhook: Account token:', account.token);
                     const tokenData = JSON.parse(account.token);
-                    console.log(`Account ${account.id} token data:`, tokenData);
+                    console.log(`Webhook: Parsed token data for account ${account.id}:`, tokenData);
+                    
                     if (tokenData.accountId === payload.accountId) {
-                        console.log(`Found matching account: ${account.id}`);
+                        console.log(`Webhook: Found matching account: ${account.id}`);
                         matchingAccount = account;
                         break;
+                    } else {
+                        console.log(`Webhook: Account ${account.id} has accountId ${tokenData.accountId}, looking for ${payload.accountId}`);
                     }
                 } catch (e) {
-                    console.error(`Failed to parse token for account ${account.id}:`, e);
+                    console.error(`Webhook: Failed to parse token for account ${account.id}:`, e);
+                    console.error('Webhook: Raw token:', account.token);
                 }
             }
 
             if (!matchingAccount) {
-                console.error(`No account found for Aurinko ID ${payload.accountId}`);
+                console.error(`Webhook: No account found for Aurinko ID ${payload.accountId}`);
+                console.log('Webhook: All accounts:', accounts.map(acc => ({
+                    id: acc.id,
+                    provider: acc.provider,
+                    emailAddress: acc.emailAddress,
+                    tokenPreview: acc.token.substring(0, 50) + '...'
+                })));
                 return new Response("Account not found", { status: 404 });
             }
 
